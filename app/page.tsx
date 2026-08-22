@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useMemo, useState } from "react";
 
 type Filter = "all" | "trusted" | "dispute";
@@ -40,20 +41,20 @@ export default function Home() {
   return (
     <main className="site-shell">
       <nav className="topbar" aria-label="Primary navigation">
-        <a className="brand" href="#top" aria-label="Aletheia home"><span className="brand-mark">A</span><span>ALETHEIA</span></a>
+        <a className="brand" href="#top" aria-label="Aletheia home"><span className="brand-mark"><Image src="/logo-mark.png" alt="" width={30} height={30} priority /></span><span>ALETHEIA</span></a>
         <div className="nav-links"><a href="#passport">Passport</a><a href="#model">Data model</a><a href="#counterfactual">Why Arkiv</a></div>
         <a className="nav-cta" href="#passport">Inspect evidence</a>
       </nav>
 
       <section className="hero" id="top">
         <div className="hero-grid" aria-hidden="true" /><div className="halo" aria-hidden="true" /><div className="halo halo-two" aria-hidden="true" />
-        <div className="truth-form" aria-hidden="true"><span className="head" /><span className="torso" /><span className="particle p1" /><span className="particle p2" /><span className="particle p3" /></div>
+        <div className="truth-form" aria-hidden="true"><Image src="/hero-figure.png" alt="" width={1024} height={1536} priority /></div>
         <div className="hero-copy"><p className="eyebrow"><span /> ARKIV DEFI · EVIDENCE, NOT VERDICTS</p><h1>LET THE<br />EVIDENCE<br /><em>SPEAK.</em></h1><p className="hero-deck">A creator-verifiable, self-expiring graph of reserve claims, independent attestations, and visible disagreement.</p></div>
         <div className="hero-action"><a href="#passport" className="signal-card"><span>Inspect the<br />USDC passport</span><i aria-hidden="true">↘</i></a><p>Freshness is a state.<br />Provenance is a proof.</p></div>
         <div className="hero-status"><span>01</span><p>Active evidence<br /><b>07 records</b></p></div>
       </section>
 
-      <section className="manifesto" aria-label="Aletheia visual manifesto"><img src="/og.png" alt="Aletheia evidence figure dissolving into verifiable particles" /><div className="manifesto-note"><span>ἀλήθεια</span><p>Truth is not a score.<br />It is what remains inspectable.</p></div></section>
+      <section className="manifesto" aria-label="Aletheia visual manifesto"><Image src="/og.png" alt="Aletheia evidence figure dissolving into verifiable particles" width={1672} height={941} /><div className="manifesto-note"><span>ἀλήθεια</span><p>Truth is not a score.<br />It is what remains inspectable.</p></div></section>
 
       <section className="passport-section" id="passport">
         <header className="section-head"><p><span>01</span> Live evidence passport</p><h2>ONE ASSET.<br /><em>EVERY VOICE.</em></h2><p className="section-deck">An illustrative dossier for a reserve-backed asset. Every opinion stays attributable. Every active record proves its own freshness.</p></header>
@@ -94,7 +95,7 @@ export default function Home() {
         <div className="walk-stage"><div className="walk-visual"><span>{steps[step][0]}</span><div className={`walk-glyph glyph-${step}`}><i /><b /></div><small>{step === 4 ? "VALIDITY / ENDED" : "ENTITY / ACTIVE"}</small></div><div className="walk-copy"><p>FRAME {steps[step][0]} / 05</p><h3>{steps[step][1]}</h3><div>{steps[step][2]}</div><nav aria-label="Walkthrough frames">{steps.map((item, index) => <button key={item[0]} className={step === index ? "active" : ""} onClick={() => setStep(index)} aria-label={`Show frame ${index + 1}`}>{item[0]}</button>)}</nav></div></div>
       </section>
 
-      <footer><div><span className="brand-mark">A</span><h2>NOT A VERDICT.<br />A VERIFIABLE VIEW.</h2></div><a href="https://tally.so/r/OD9eeY" target="_blank" rel="noreferrer">Open submission form <span>↗</span></a><p>ALETHEIA · ARKIV DEFI IDEATHON · 2026</p></footer>
+      <footer><div><span className="brand-mark"><Image src="/logo-mark.png" alt="" width={30} height={30} /></span><h2>NOT A VERDICT.<br />A VERIFIABLE VIEW.</h2></div><div className="footer-note"><span>CREATOR-VERIFIABLE</span><span>SELF-EXPIRING</span><span>BUILT FOR DEFI RISK</span></div><p>ALETHEIA · ARKIV DEFI IDEATHON · 2026</p></footer>
     </main>
   );
 }

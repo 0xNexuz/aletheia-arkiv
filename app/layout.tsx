@@ -23,8 +23,8 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title,
     description,
-    icons: { icon: "/favicon.svg", shortcut: "/favicon.svg" },
-    openGraph: { title, description, images: [{ url: image, width: 1920, height: 1080, alt: "Aletheia — Evidence, not verdicts" }] },
+    icons: { icon: [{ url: "/favicon.png", type: "image/png", sizes: "64x64" }], shortcut: "/favicon.png", apple: "/logo-mark.png" },
+    openGraph: { title, description, images: [{ url: image, width: 1672, height: 941, alt: "Aletheia — Evidence, not verdicts" }] },
     twitter: { card: "summary_large_image", title, description, images: [image] },
   };
 }

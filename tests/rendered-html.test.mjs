@@ -31,6 +31,10 @@ test("server-renders the Aletheia experience", async () => {
   assert.match(html, /POSTGRES CAN ALSO HIDE IT\./);
   assert.match(html, /ARKIV ENTITY GRAPH/);
   assert.match(html, /ILLUSTRATIVE DATA/);
+  assert.match(html, /hero-figure\.png/);
+  assert.match(html, /logo-mark\.png/);
+  assert.match(html, /favicon\.png/);
+  assert.doesNotMatch(html, /tally\.so|Open submission form/i);
 });
 
 test("renders the Arkiv contract and accessible interaction labels", async () => {
