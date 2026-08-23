@@ -36,6 +36,9 @@ test("server-renders the Aletheia experience", async () => {
   assert.match(html, /hero-figure\.png/);
   assert.match(html, /logo-mark\.png/);
   assert.match(html, /favicon\.png/);
+  assert.match(html, /src="\/hero-figure\.png"/i);
+  assert.match(html, /src="\/og\.png"/i);
+  assert.doesNotMatch(html, /\/_next\/image\?url=/i);
   assert.doesNotMatch(html, /tally\.so|Open submission form/i);
   assert.doesNotMatch(html, /0x71A4…C209|EV-041/);
 });
