@@ -10,14 +10,19 @@
     "build": "vinext build",
     "build:vercel": "npm run build && node scripts/export-vercel.mjs",
     "start": "vinext start",
-    "test": "npm run build && node --test tests/rendered-html.test.mjs",
+    "test": "npm run test:unit && npm run build && node --test tests/rendered-html.test.mjs",
+    "test:unit": "node --experimental-strip-types --test tests/arkiv-domain.test.ts",
+    "test:arkiv:live": "node --experimental-strip-types --test tests/arkiv-live.test.ts",
+    "arkiv:seed": "node --experimental-strip-types scripts/seed-arkiv.ts",
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next",
     "db:generate": "drizzle-kit generate"
   },
   "dependencies": {
+    "@arkiv-network/sdk": "^0.7.0",
     "drizzle-orm": "0.45.2",
     "react": "19.2.6",
-    "react-dom": "19.2.6"
+    "react-dom": "19.2.6",
+    "viem": "^2.55.19"
   },
   "devDependencies": {
     "@cloudflare/vite-plugin": "1.37.1",
@@ -42,7 +47,8 @@
     "typescript-eslint": "8.59.3",
     "vinext": "1.0.0-beta.2",
     "vite": "8.0.13",
-    "wrangler": "4.92.0"
+    "wrangler": "4.92.0",
+    "ws": "8.21.0"
   },
   "type": "module"
 }

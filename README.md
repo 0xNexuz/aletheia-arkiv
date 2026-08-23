@@ -5,79 +5,134 @@
 
   **Evidence, not verdicts.**
 
-  A creator-verifiable, self-expiring graph of reserve claims, independent attestations, and visible disagreement for DeFi risk teams.
+  A creator-verifiable, time-bounded disagreement graph for DeFi reserve evidence.
 
-  [Live demo](https://aletheia-self.vercel.app) · [Architecture](#architecture) · [Demo guide](#90-second-demo) · [Local setup](#local-development)
+  [Live app](https://aletheia-self.vercel.app) · [Judge it in 60 seconds](#judge-this-in-60-seconds) · [Architecture](#architecture) · [Run locally](#setup)
 </div>
 
 ![Aletheia product cover](public/og.png)
 
-## What Aletheia is
-
-Aletheia is an interactive product concept for the **DeFi track of the Arkiv Ideathon**. It helps lending-protocol risk teams evaluate reserve-backed collateral—such as stablecoins and tokenized real-world assets—without relying on one operator-controlled safety score.
-
-Instead, Aletheia presents a queryable evidence graph:
-
-- issuers publish time-bounded reserve claims;
-- auditors and risk agents publish independently authored attestations;
-- attestations explicitly corroborate, qualify, or dispute a claim;
-- each protocol defines the creator wallets and thresholds it trusts; and
-- expired evidence automatically leaves the active query surface.
-
-The interface does **not** claim that an asset is safe. It makes every current claim, author, limitation, and disagreement independently inspectable.
-
 > [!IMPORTANT]
-> This repository is the production-hosted interactive ideathon demo. Its records are clearly labelled illustrative. It demonstrates the complete Arkiv entity model, query behavior, expiration semantics, and judge-facing workflow; it does not claim a live network deployment or automated collateral execution.
+> **What a judge should verify first:** open **View query**, inspect a record, and confirm the entity ID, immutable `$creator`, validity window, transaction hash, raw attributes, and network state. If Arkiv is unavailable, Aletheia fails closed. The separately activated fixture preview is visibly marked **NOT ARKIV** and never masquerades as network proof.
 
-## The problem
+## One-line thesis
 
-Reserve evidence is fragmented across issuer pages, assurance reports, PDFs, and internal risk reviews. A conventional aggregator becomes another trusted intermediary: it can decide which opinions appear, silently revise normalized data, misrepresent an author, or leave stale evidence visible.
+Aletheia lets DeFi risk teams compare independently authored reserve claims, corroborations, qualifications, and disputes without trusting one aggregator to control the conclusion.
 
-That creates three specific risks:
+## Problem
 
-1. **Provenance risk** — users must trust the aggregator's account of who produced an opinion.
-2. **Censorship risk** — adverse evidence can be hidden or de-ranked.
-3. **Freshness risk** — expiry is an application promise instead of a protocol-level property.
+Reserve evidence is fragmented across issuer disclosures, assurance reports, PDFs, and internal protocol reviews. Risk teams need to answer a recurring question before admitting reserve-backed collateral: **what current evidence exists, who authored it, and where do credible reviewers disagree?**
 
-## The product
+A conventional dashboard can normalize that evidence, but it also becomes another trusted intermediary. Its operator can omit an adverse opinion, relabel an author, revise a record without an independently verifiable trace, or leave stale evidence in the active view.
 
-The current demo centers on one illustrative USDC evidence passport. It lets a judge:
+## Why centralized scoring fails
 
-1. inspect an issuer claim and two independently authored opinions;
-2. see `$creator`, stance, coverage, and observation time on every record;
-3. filter evidence using a protocol-owned trusted-creator policy;
-4. isolate an adverse opinion without deleting favorable evidence;
-5. advance time by ten days and watch stale evidence leave the active result; and
-6. inspect the Arkiv data contract and database counterfactual.
+A single proprietary score hides the exact information a risk team needs to inspect:
 
-## Why Arkiv is load-bearing
+- different evidence methodologies are not interchangeable;
+- a proof-of-reserves snapshot may omit liabilities, legal rights, or temporary asset movements;
+- reasonable experts can reach different conclusions from the same claim; and
+- each lending protocol has its own trusted reviewers and risk thresholds.
 
-| Product promise | Operator database | Arkiv-backed design |
+Aletheia therefore preserves disagreement. A corroboration, qualification, or dispute is a separately authored entity—not an input that disappears inside an operator-owned score.
+
+## Solution
+
+The product is an evidence passport for reserve-backed assets:
+
+1. an issuer publishes a compact `ReserveClaim` linked to the full evidence by hash and pointer;
+2. independent writers append `Attestation` or `DisputeNotice` entities;
+3. each protocol publishes its own `TrustPolicy` for accepted creator wallets and freshness thresholds;
+4. Aletheia queries only current entities and exposes every proof field in the interface; and
+5. the protocol keeps its private risk model and final collateral decision off Arkiv.
+
+The product never claims an asset is safe. It makes current evidence and disagreement independently inspectable.
+
+## Why Arkiv is necessary
+
+| User-visible promise | Operator-controlled database | Arkiv-backed design |
 |---|---|---|
-| Verifiable authorship | The platform asserts the author | Immutable `$creator` is visible on every write |
-| Visible disagreement | The operator can hide an adverse record | Opinions remain separately authored, append-only entities |
-| Reliable freshness | A cron job decides what looks active | Entity expiration governs the active query surface |
-| Inspectable history | Normalized data can be silently rewritten | Every published record has verifiable provenance |
-| Consumer-owned trust | The aggregator owns the score | Each protocol publishes its own `TrustPolicy` |
+| Authorship | The application asserts who wrote a record | `$creator` is read from Arkiv metadata |
+| Disagreement | An operator can suppress an adverse opinion | Each opinion is an independent, append-only entity |
+| Freshness | A cron job decides what remains active | The active query filters `validUntil`, while Arkiv expiry prunes stale state |
+| Proof | A UI row can be fabricated | Entity ID, owner, attributes, expiry block, and transaction hash are inspectable |
+| Trust | The aggregator owns the score | Each protocol owns its `TrustPolicy` |
 
-Replacing Arkiv with Postgres would preserve storage, but break the user-visible guarantees that make Aletheia useful.
+Replacing Arkiv with Postgres would preserve storage, but break the provenance and multi-writer guarantees that define the product.
+
+## Data model
+
+Every entity uses `project = "aletheia"`. Relationships use explicit `assetId` and `claimId` attributes. Range-filtered values are integer numeric attributes: timestamps in seconds, money in cents, and ratios in basis points.
+
+| Entity | Purpose | Key attributes | Lifetime |
+|---|---|---|---|
+| `ReserveClaim` | Issuer reserve assertion | `assetId`, `claimId`, `issuerId`, `methodologyId`, `evidenceHash`, `observedAt`, `validUntil`, `reserveUsdCents`, `liabilityUsdCents`, `coverageBps` | Evidence-defined; commonly 8–35 days |
+| `Attestation` | Independent opinion | `assetId`, `claimId`, `methodologyId`, `stance`, `confidenceBps`, `coverageBps`, `validUntil` | Never longer than its parent claim |
+| `DisputeNotice` | Queryable adverse evidence | `assetId`, `claimId`, `reasonCode`, `evidenceHash`, `severityTier`, `validUntil` | Seven days or remaining claim life |
+| `TrustPolicy` | Protocol-specific creator policy | `protocolId`, `assetId`, `trustedCreator`, `minCoverageBps`, `maxAgeSec`, `minCorroborations`, `validUntil` | 90 days |
+| `ParticipantProfile` | Public writer metadata | `participantId`, `role`, `displayName`, `credentialHash`, `status` | One year |
+
+## Real Arkiv integration
+
+The browser adapter in `app/arkiv-client.ts` uses the official `@arkiv-network/sdk` public client. Its runtime path is:
+
+1. read network time from the configured Arkiv chain;
+2. query `project = aletheia`, the selected `assetId`, and `validUntil > networkNow`;
+3. fetch each matching entity and its immutable metadata;
+4. derive creator, owner, expiry block, and creation transaction hash from network data; and
+5. render active evidence without silently substituting local fixtures.
+
+The seed script in `scripts/seed-arkiv.ts` uses three independent wallets, confirms each write, reads it back, verifies the creator, and only then writes `public/arkiv-proof-manifest.json`. Seed private keys are never written to the manifest or browser bundle.
+
+> [!NOTE]
+> Arkiv's Braga network was retired on August 12, 2026. Arkiv currently documents limited devnet access through August and a public testnet planned for September. This repository contains the production integration and opt-in live test, but cannot truthfully claim a newly seeded public dataset until a live RPC, chain ID, explorer, and funded writer keys are supplied.
+
+## Creator provenance
+
+Issuer, attestor, challenger, and protocol policy writes are made by separate wallets. The UI never accepts a payload field as creator proof; it reads `$creator` from Arkiv entity metadata. A trust filter compares that immutable address with the active protocol policy.
+
+The fixture preview uses obviously synthetic addresses and a persistent **NOT ARKIV** warning. It exists only so reviewers can understand the interaction while the public network is unavailable.
+
+## Disagreement model
+
+Aletheia never updates one record to change a verdict. New evidence appends a new entity:
+
+```text
+ReserveClaim
+  ├── Attestation: corroborate
+  ├── Attestation: qualify
+  └── DisputeNotice: dispute
+```
+
+All branches share `claimId`, retain distinct `$creator` values, and remain visible until their own validity windows end. A user may filter the view, but the query inspector always reports the current network result set.
+
+## Freshness / expiration
+
+`validUntil` is part of both the entity attributes and the active predicate. The seed script also supplies Arkiv's entity-expiration value. Child evidence is rejected if its lifetime exceeds the parent claim.
+
+Arkiv documentation says expired entity data is pruned from live state. Aletheia does **not** claim that an expired entity remains directly queryable. Instead, the proof manifest retains the confirmed creation transaction reference so a reviewer can inspect the historical write after the live entity leaves the active query.
+
+## Active query
+
+Conceptually, the main predicate is:
+
+```text
+eq(project, "aletheia")
++ eq(assetId, selectedAsset)
++ gt(validUntil, networkNow)
+```
+
+The browser then groups the returned entity types and applies the selected protocol's trusted-creator policy. Pagination is cursor-based, and bounded client-side ordering is used only where necessary.
 
 ## Architecture
 
 ```mermaid
 flowchart LR
-    subgraph Sources[Evidence sources]
-        I[Issuer disclosure]
-        A[Independent assurance]
-        R[Protocol risk opinion]
-        F[Public report or evidence file]
-    end
-
-    subgraph Writers[Independent writers]
-        IW[Issuer wallet]
-        AW[Auditor wallet]
-        RW[Risk-agent wallet]
-        PW[Protocol wallet]
+    subgraph IndependentWriters[Independent writers]
+        I[Issuer wallet]
+        A[Attestor wallet]
+        C[Challenger wallet]
+        P[Protocol wallet]
     end
 
     subgraph Arkiv[Arkiv DB-Chain]
@@ -88,244 +143,188 @@ flowchart LR
         PP[(ParticipantProfile)]
     end
 
-    subgraph Aletheia[Aletheia application]
-        Q[Active evidence query]
-        CF[Trusted-creator filter]
-        UI[Asset passport]
+    subgraph App[Aletheia web app]
+        PC[Arkiv PublicClient]
+        AQ[Active-evidence query]
+        TF[Trusted-creator filter]
+        UI[Evidence passport + proof drawer]
     end
 
-    subgraph Consumer[Protocol boundary]
-        RE[Private risk engine]
-        CD[Collateral decision]
+    subgraph OffChain[Protocol boundary]
+        R[Private risk model]
+        D[Collateral decision]
     end
 
-    F -->|hash + pointer| I
-    I --> IW --> RC
-    A --> AW --> AT
-    R --> RW --> AT
-    RW --> DN
-    PW --> TP
-    IW --> PP
-    AW --> PP
-    RW --> PP
+    I --> RC
+    A --> AT
+    C --> DN
+    P --> TP
+    I --> PP
+    A --> PP
+    C --> PP
 
-    RC --> Q
-    AT --> Q
-    DN --> Q
-    TP --> CF
-    Q --> CF --> UI
-    UI --> RE --> CD
-
-    classDef arkiv fill:#ff5a2f,color:#090909,stroke:#ff5a2f;
-    class RC,AT,DN,TP,PP arkiv;
+    RC --> PC
+    AT --> PC
+    DN --> PC
+    TP --> PC
+    PP --> PC
+    PC --> AQ --> TF --> UI --> R --> D
 ```
-
-### Evidence lifecycle
 
 ```mermaid
-stateDiagram-v2
-    [*] --> Published: creator writes entity
-    Published --> Active: validUntil > now
-    Active --> Corroborated: append corroborating attestation
-    Active --> Qualified: append methodological limitation
-    Active --> Disputed: append adverse attestation
-    Corroborated --> Disputed: disagreement arrives
-    Qualified --> Disputed: adverse evidence arrives
-    Corroborated --> Expired: validUntil <= now
-    Qualified --> Expired: validUntil <= now
-    Disputed --> Expired: validUntil <= now
-    Active --> Expired: validUntil <= now
-    Expired --> [*]: excluded from active query
+sequenceDiagram
+    participant Writer as Independent writer
+    participant Arkiv as Arkiv network
+    participant App as Aletheia
+    participant Judge as Judge
+
+    Writer->>Arkiv: createEntity(attributes, payload, expiresIn)
+    Arkiv-->>Writer: confirmed transaction + entity ID
+    App->>Arkiv: query project/asset/validUntil
+    Arkiv-->>App: active entity keys
+    App->>Arkiv: getEntity + metadata
+    Arkiv-->>App: creator, owner, attributes, expiry, tx
+    Judge->>App: open proof drawer
+    App-->>Judge: raw, inspectable network proof
 ```
 
-Expiration removes a record from the active application view; it does not erase historical chain data.
+## Judge this in 60 seconds
 
-## Arkiv data contract
+1. Open the [live app](https://aletheia-self.vercel.app) and read the network-status badge.
+2. Click **View query**. Confirm the project namespace, asset, network time, validity predicate, result count, and returned entity IDs.
+3. Open an evidence row. Confirm entity ID, `$creator`, owner, validity window, expiry block, transaction hash, and raw attributes.
+4. Select **trusted** and then **dispute**. The views filter records; no favorable or adverse record is overwritten.
+5. Switch to **transaction history**. Confirm that expired live state is not presented as active evidence.
+6. If the network is unavailable, activate the explicitly labelled fixture preview and verify that every proof surface says **NOT ARKIV**.
 
-Every entity is namespaced with `project = "aletheia"`. Relationships use explicit shared `assetId` and `claimId` keys. Multi-party opinions are append-only so one writer never replaces another writer's state.
+## Live demo
 
-| Entity | Purpose | Important attributes | Lifetime |
-|---|---|---|---|
-| `ReserveClaim` | Issuer's compact reserve assertion | `assetId`, `claimId`, `issuerId`, `methodologyId`, `evidenceHash`, `observedAt`, `validUntil`, `reserveUsdCents`, `liabilityUsdCents`, `coverageBps` | Evidence-defined; normally 8–35 days |
-| `Attestation` | Independent opinion about a claim | `assetId`, `claimId`, `methodologyId`, `stance`, `status`, `observedAt`, `validUntil`, `confidenceBps`, `coverageBps` | Never longer than its parent claim |
-| `DisputeNotice` | Compact, queryable adverse evidence | `assetId`, `claimId`, `reasonCode`, `evidenceHash`, `severityTier`, `observedAt`, `validUntil` | Seven days or remaining claim life |
-| `TrustPolicy` | Protocol-specific creator and freshness policy | `protocolId`, `assetId`, `trustedCreator`, `minCoverageBps`, `maxAgeSec`, `minCorroborations`, `validUntil` | 90 days |
-| `ParticipantProfile` | Public participant metadata | `participantId`, `role`, `displayName`, `credentialHash`, `status` | One year |
+**URL:** [aletheia-self.vercel.app](https://aletheia-self.vercel.app)
 
-Money is stored as integer cents, ratios as basis points, timestamps as integer seconds, and severity as an integer tier. This keeps range predicates deterministic.
+### 90-second narration
 
-### Core predicates
+**0–12s — Hook**
 
-```text
-# Active attestations for an asset
-eq(project, "aletheia")
-+ eq(type, "attestation")
-+ eq(assetId, X)
-+ gt(validUntil, now)
+> Aletheia is Greek for unconcealment. It gives DeFi risk teams a verifiable view of reserve evidence without manufacturing one universal safety score.
 
-# Active disputes for a claim
-eq(type, "attestation")
-+ eq(claimId, X)
-+ eq(stance, "dispute")
-+ gt(validUntil, now)
+**12–27s — Problem**
 
-# Current protocol trust policy
-eq(type, "trust_policy")
-+ eq(protocolId, P)
-+ eq(assetId, X)
-+ gt(validUntil, now)
-```
+> Reserve claims, assurance reports, and internal risk opinions are fragmented. A normal aggregator controls which evidence appears, who it says authored it, and when it becomes stale.
 
-Results are cursor-paginated. Aletheia filters `$creator` against the selected protocol's policy and performs only bounded client-side ordering where required.
+**27–45s — Proof**
 
-## What stays off Arkiv
+> I will open the live query and one record. These are the Arkiv entity ID, immutable creator, owner, validity window, expiry block, creation transaction, and raw attributes. Aletheia reads these fields from the network; it does not trust labels in a payload.
 
-- raw assurance reports, bank statements, large files, and private account data;
-- KYC material, secret inputs, or ZK witnesses;
-- proprietary risk calculations and the final admission decision;
-- price oracles, trading, liquidation, collateral enforcement, and other latency-sensitive execution; and
-- any claim that evidence alone proves complete solvency.
+**45–60s — Disagreement**
 
-Arkiv receives compact public facts, hashes, evidence pointers, ownership, timestamps, and coordination state.
+> Corroborations, qualifications, and disputes are separate, append-only entities from independent wallets. A protocol applies its own trusted-creator policy, but no central writer controls the conclusion.
 
-## Repository status
+**60–75s — Freshness**
 
-| Surface | Status |
-|---|---|
-| Responsive product experience | Complete |
-| Evidence filtering and dispute view | Complete |
-| Time-advance / expiry demonstration | Complete |
-| Five-frame judge walkthrough | Complete |
-| Arkiv entity and predicate specification | Complete |
-| Production Vercel deployment | Live |
-| Live Arkiv network writes | Intentionally not claimed |
-| Automated collateral admission | Out of scope |
+> The active query requires validUntil to be later than network time. When Arkiv expires the entity, it leaves live state. Aletheia keeps only the confirmed transaction reference for historical inspection—it never relabels expired evidence as active.
 
-## Technology
+**75–90s — Counterfactual**
 
-- React 19 and TypeScript
-- vinext and Vite
-- Tailwind CSS processing with a bespoke editorial design system
-- Cloudflare Worker-compatible build output
-- Static Vercel export for the public demo
-- Node's built-in test runner and ESLint
+> With Postgres, the operator could hide a dispute, impersonate an author, or keep stale evidence visible. Arkiv makes provenance, multi-writer disagreement, and expiry load-bearing. Aletheia does not decide if an asset is safe; it makes every current claim independently checkable.
 
-## Local development
+## Setup
 
-### Requirements
-
-- Node.js `>=22.13.0`
-- npm
-
-### Run locally
+Requirements: Node.js `>=22.13.0` and npm.
 
 ```bash
 git clone https://github.com/0xNexuz/aletheia-arkiv.git
 cd aletheia-arkiv
 npm install
+cp .env.example .env.local
 npm run dev
 ```
 
 Open `http://localhost:3000`.
 
-### Validate
+## Environment variables
+
+Public browser configuration:
+
+| Variable | Required | Purpose |
+|---|---:|---|
+| `VITE_ARKIV_RPC_URL` | yes for live mode | Arkiv JSON-RPC endpoint |
+| `VITE_ARKIV_CHAIN_ID` | yes for live mode | Numeric Arkiv chain ID |
+| `VITE_ARKIV_NETWORK_NAME` | recommended | Human-readable network label |
+| `VITE_ARKIV_EXPLORER_URL` | recommended | Base explorer URL for proof links |
+| `VITE_ALETHEIA_ASSET_ID` | optional | Defaults to the demo asset namespace |
+| `VITE_ALETHEIA_PROTOCOL_ID` | optional | Defaults to the demo protocol namespace |
+
+Server/local seed configuration:
+
+| Variable | Required | Purpose |
+|---|---:|---|
+| `ARKIV_RPC_URL` | yes | Arkiv writer RPC |
+| `ARKIV_CHAIN_ID` | yes | Numeric chain ID |
+| `ARKIV_NETWORK_NAME` | optional | Manifest network label |
+| `ARKIV_EXPLORER_URL` | recommended | Proof-link base URL |
+| `ARKIV_ISSUER_PRIVATE_KEY` | yes | Issuer writer; server/local only |
+| `ARKIV_ATTESTOR_PRIVATE_KEY` | yes | Independent attestor; server/local only |
+| `ARKIV_CHALLENGER_PRIVATE_KEY` | yes | Challenger writer; server/local only |
+| `ALETHEIA_SEED_ID` | yes | Unique seed namespace; duplicate seeds are rejected |
+| `ALETHEIA_ASSET_ID` | optional | Asset namespace |
+| `ALETHEIA_PROTOCOL_ID` | optional | Protocol namespace |
+| `ALETHEIA_EXPIRY_PROBE_SECONDS` | optional | Short-lived record for the live expiry test |
+
+Never expose writer private keys through `VITE_` variables or commit them to Git.
+
+## Testing
 
 ```bash
-npm run lint
 npm test
-```
-
-### Build the public Vercel export
-
-```bash
+npm run lint
+npm run arkiv:seed
+ARKIV_LIVE_TEST=1 npm run test:arkiv:live
 npm run build:vercel
 ```
 
-This generates the vinext production build and exports the root experience to `dist/client/index.html` for Vercel's static delivery.
+The unit suite verifies claim/attestation/dispute mapping, distinct creators, active-versus-expired behavior, transaction-backed historical references, malformed and duplicate write rejection, query constraints, and fail-closed network behavior.
 
-## Project structure
+## REAL vs DEMO
 
-```text
-app/
-  globals.css          visual system, responsive states, and motion
-  layout.tsx           metadata, social cards, and favicon
-  page.tsx             interactive evidence passport and narrative
-public/
-  favicon.png          browser icon
-  hero-figure.png      transparent particle figure
-  logo-mark.png        Aletheia brand mark
-  og.png               social preview and visual manifesto
-scripts/
-  export-vercel.mjs    production static-export adapter
-tests/
-  rendered-html.test.mjs
-vercel.json            Vercel production configuration
-```
+| Surface | Classification | How to verify |
+|---|---|---|
+| Arkiv SDK adapter | **REAL CODE PATH** | Inspect `app/arkiv-client.ts` |
+| Multi-wallet seed and confirmation | **REAL CODE PATH** | Inspect and run `scripts/seed-arkiv.ts` |
+| Live query/entity proof drawer | **REAL when configured** | Check the UI network badge and explorer links |
+| `public/arkiv-proof-manifest.json` | **UNVERIFIED until seeded** | Must contain confirmed IDs and transactions from the seed run |
+| Fixture preview | **DEMO / NOT ARKIV** | Persistent warning and synthetic identifiers |
+| Final collateral decision | **OUT OF SCOPE** | Remains inside the consuming protocol |
 
-## 90-second demo
+No important behavior silently falls back to hardcoded evidence. Missing or failed network configuration produces an unavailable/error state; fixtures require an explicit user action.
 
-### Click path
+## Limitations
 
-1. Open [aletheia-self.vercel.app](https://aletheia-self.vercel.app).
-2. Introduce the one-line promise from the hero.
-3. Click **Inspect the USDC passport**.
-4. Point out the three stances and visible `$creator` values.
-5. Click **trusted**, then **dispute**.
-6. Click **+10D** and show the empty active-evidence state.
-7. Click **Return to today**.
-8. Show the five Arkiv entities and active-evidence predicate.
-9. Contrast Postgres with Arkiv.
-10. Select walkthrough frame **05** and deliver the closing line.
+- Arkiv has no open public network at the time of this update; live proof requires limited devnet credentials or the next public testnet.
+- Evidence provenance does not prove complete solvency or validate the underlying report.
+- Public evidence may be scraped; private inputs and risk calculations stay off Arkiv.
+- Arkiv expiry prunes live entity data, so Aletheia references the creation transaction for historical inspection rather than promising historical entity queries.
+- The browser bundle is read-only. Production writes belong in a secured service or controlled seed process.
+- Automated collateral admission, liquidation, staking, auditor governance, and ZK proof generation are deliberately excluded.
 
-### Narration
+## Security
 
-**0–10 seconds — Hook**
+- Private keys are accepted only by the local/server seed script.
+- The browser uses a public client and cannot write.
+- Duplicate seed namespaces fail before any write.
+- Seeded entities are read back and creator-checked after confirmation.
+- Child validity cannot exceed the parent claim.
+- Creator trust is matched against Arkiv metadata, never user-controlled payload text.
+- Raw private reports, KYC, bank statements, and secret model inputs are never stored on Arkiv.
 
-> This is Aletheia—Greek for truth or unconcealment. It gives DeFi risk teams a verifiable view of reserve evidence without pretending to manufacture one universal safety score.
+## Future work
 
-**10–25 seconds — Problem**
-
-> Reserve evidence currently lives across issuer pages, assurance reports, PDFs, and private risk reviews. An ordinary aggregator controls which opinions remain visible and when evidence is considered stale.
-
-**25–42 seconds — Product**
-
-> Here is one illustrative USDC evidence passport. The issuer disclosure, independent assurance, and protocol risk opinion remain separate records. Every opinion exposes its own creator wallet, stance, coverage, and observation time.
-
-**42–55 seconds — Trust and disagreement**
-
-> A protocol can apply its own trusted-creator policy. Selecting trusted keeps the issuer and independent assurance. Selecting dispute reveals the adverse risk opinion without deleting or overriding favorable records.
-
-**55–67 seconds — Demo moment**
-
-> Freshness is part of the data contract. I will advance ten days. Every active record expires, and the passport becomes insufficient—not because Aletheia changed a score, but because stale evidence automatically left the active query surface.
-
-**67–79 seconds — Technical mechanism**
-
-> Underneath are five append-only Arkiv entities: reserve claims, attestations, disputes, trust policies, and participant profiles. Shared asset and claim IDs keep the evidence directly queryable.
-
-**79–90 seconds — Counterfactual and close**
-
-> With Postgres, the operator can hide an adverse opinion, relabel its author, or keep stale evidence active. Arkiv makes creator identity, provenance, and expiration load-bearing. Aletheia does not decide whether an asset is safe—it makes every current claim and disagreement independently checkable.
-
-## Principal risks and mitigations
-
-| Risk | Mitigation |
-|---|---|
-| Open-attestor spam | Each consumer filters immutable creator wallets through its own `TrustPolicy` |
-| Evidence mistaken for solvency proof | Show methodology and limitations; never collapse evidence into a universal score |
-| Cold start | One protocol can combine issuer data with its own internal risk opinion |
-| Shared-database scale | Namespace and paginate narrow queries by project, asset, claim, and protocol |
-| Public scraping | Treat public reuse as distribution; keep private calculations off Arkiv |
-| Expired child evidence | An opinion cannot remain active beyond the referenced claim |
-
-## MVP boundary
-
-The demo intentionally excludes live collateral admission, liquidation, universal auditor governance, staking, ZK-proof generation, proprietary safety scores, and a full stablecoin registry. These features would obscure the central proof: independently authored evidence, consumer-owned trust, and time-bounded queryability.
-
-## Brand
-
-The mark is the **Unconcealed A**: two opening evidence brackets surrounding an orange provenance graph. It represents truth becoming inspectable without a central party controlling the conclusion.
+- seed and publish the proof manifest when Arkiv public testnet becomes available;
+- add cursor pagination for larger evidence sets;
+- support multiple protocol policies and asset namespaces;
+- add report-hash verification and content-addressed evidence links;
+- create a secured writer service with wallet isolation and audit logging; and
+- evaluate ZK attestations for private reserve components without exposing witnesses.
 
 ---
 
-Built for the Arkiv Ideathon DeFi track. Aletheia means **truth** or **unconcealment**.
+Built by **Magnum Inc.** for the Arkiv Ideathon DeFi track.

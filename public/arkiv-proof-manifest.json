@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "project": "aletheia",
+  "network": "unconfigured",
+  "chainId": 0,
+  "seededAt": null,
+  "seedId": null,
+  "records": [],
+  "note": "No Arkiv proof has been seeded. This file is populated only by scripts/seed-arkiv.ts after confirmed writes."
+}
