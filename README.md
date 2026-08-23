@@ -201,32 +201,6 @@ sequenceDiagram
 
 **URL:** [aletheia-self.vercel.app](https://aletheia-self.vercel.app)
 
-### 90-second narration
-
-**0–12s — Hook**
-
-> Aletheia is Greek for unconcealment. It gives DeFi risk teams a verifiable view of reserve evidence without manufacturing one universal safety score.
-
-**12–27s — Problem**
-
-> Reserve claims, assurance reports, and internal risk opinions are fragmented. A normal aggregator controls which evidence appears, who it says authored it, and when it becomes stale.
-
-**27–45s — Proof**
-
-> I will open the live query and one record. These are the Arkiv entity ID, immutable creator, owner, validity window, expiry block, creation transaction, and raw attributes. Aletheia reads these fields from the network; it does not trust labels in a payload.
-
-**45–60s — Disagreement**
-
-> Corroborations, qualifications, and disputes are separate, append-only entities from independent wallets. A protocol applies its own trusted-creator policy, but no central writer controls the conclusion.
-
-**60–75s — Freshness**
-
-> The active query requires validUntil to be later than network time. When Arkiv expires the entity, it leaves live state. Aletheia keeps only the confirmed transaction reference for historical inspection—it never relabels expired evidence as active.
-
-**75–90s — Counterfactual**
-
-> With Postgres, the operator could hide a dispute, impersonate an author, or keep stale evidence visible. Arkiv makes provenance, multi-writer disagreement, and expiry load-bearing. Aletheia does not decide if an asset is safe; it makes every current claim independently checkable.
-
 ## Setup
 
 Requirements: Node.js `>=22.13.0` and npm.
