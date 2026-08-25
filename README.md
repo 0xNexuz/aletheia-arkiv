@@ -7,7 +7,7 @@
 
   A creator-verifiable, time-bounded disagreement graph for DeFi reserve evidence.
 
-  [Live app](https://aletheia-self.vercel.app) · [Judge it in 60 seconds](#judge-this-in-60-seconds) · [Architecture](#architecture) · [Run locally](#setup)
+  [Live app](https://aletheia-self.vercel.app) · [Submission answers](SUBMISSION.md) · [Judge it in 60 seconds](#judge-this-in-60-seconds) · [Architecture](#architecture) · [Run locally](#setup)
 </div>
 
 ![Aletheia product cover](public/og.png)
@@ -110,11 +110,13 @@ All branches share `claimId`, retain distinct `$creator` values, and remain visi
 
 `validUntil` is part of both the entity attributes and the active predicate. The seed script also supplies Arkiv's entity-expiration value. Child evidence is rejected if its lifetime exceeds the parent claim.
 
+`ReserveClaim`, `Attestation`, and `DisputeNotice` entities are never extended to simulate freshness. A reassessment creates a new, separately signed entity. `TrustPolicy` may be extended only after the protocol reapproves its trusted creators and thresholds. `ParticipantProfile` may be renewed after its credential is renewed; renewal signals continued participation, not endorsement.
+
 Arkiv documentation says expired entity data is pruned from live state. Aletheia does **not** claim that an expired entity remains directly queryable. Instead, the proof manifest retains the confirmed creation transaction reference so a reviewer can inspect the historical write after the live entity leaves the active query.
 
-## Active query
+## Core query contract
 
-Conceptually, the main predicate is:
+### 1. Active evidence for an asset
 
 ```text
 eq(project, "aletheia")
@@ -122,7 +124,46 @@ eq(project, "aletheia")
 + gt(validUntil, networkNow)
 ```
 
-The browser then groups the returned entity types and applies the selected protocol's trusted-creator policy. Pagination is cursor-based, and bounded client-side ordering is used only where necessary.
+The browser groups the current claim and opinions by type, filters immutable `$creator` values against the selected protocol policy, and uses cursor pagination with bounded client-side ordering where needed.
+
+### 2. Active disputes for a claim
+
+```text
+eq(project, "aletheia")
++ eq(type, "dispute_notice")
++ eq(claimId, selectedClaim)
++ gt(validUntil, networkNow)
+```
+
+A count query drives the disagreement badge; records are fetched only when the analyst opens the dispute view.
+
+### 3. Current protocol trust policy
+
+```text
+eq(project, "aletheia")
++ eq(type, "trust_policy")
++ eq(protocolId, selectedProtocol)
++ eq(assetId, selectedAsset)
++ gt(validUntil, networkNow)
+```
+
+The newest active policy supplies trusted creator wallets, freshness bounds, coverage thresholds, and corroboration requirements. No query depends on joins, push events, triggers, or latency-sensitive execution.
+
+## Adoption path
+
+- **First user:** a lending-protocol risk analyst deciding whether a stablecoin or tokenized real-world asset should enter or remain in a collateral market.
+- **First 100 entities:** the protocol's ingestion worker publishes compact issuer disclosures; its own analysts and risk agents append signed opinions and disputes. External attestors are optional at launch.
+- **Activation event:** the analyst compares one current issuer claim with at least one trusted independent opinion before the collateral review proceeds.
+- **Single-user starting mode:** one protocol gets immediate value by combining issuer evidence with its own internal risk opinion; outside writers improve coverage later without being required for day-one usefulness.
+- **Distribution wedge:** begin as the inspectable evidence appendix to an existing collateral-review memo, then let other protocols reuse the same public entities with their own `TrustPolicy`.
+
+## Deliberate differentiation
+
+The obvious product is a proof-of-reserves dashboard with one proprietary score. Aletheia instead preserves an append-only disagreement graph and consumer-owned trust policies. Corroborations, qualifications, and disputes remain separately authored entities; no central writer owns the conclusion.
+
+## Weekend MVP
+
+One USDC passport, one issuer claim, two independently authored attestations, one dispute, one protocol policy, the three predicates above, visible proof metadata, and expiry changing the active result. No collateral execution, universal auditor governance, private-data storage, or proprietary safety score.
 
 ## Architecture
 
