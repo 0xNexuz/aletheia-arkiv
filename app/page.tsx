@@ -29,6 +29,19 @@ const nodes = [
   ["ParticipantProfile", "self-owned", "1 year", "role · credentialHash"],
 ];
 
+const coreQueries = [
+  ["01 / ACTIVE EVIDENCE", 'eq(project,"aletheia") + eq(assetId,X) + gt(validUntil,now)', "Current claim and opinions for the selected asset."],
+  ["02 / ACTIVE DISPUTES", 'eq(project,"aletheia") + eq(type,"dispute_notice") + eq(claimId,C) + gt(validUntil,now)', "Count first; fetch when the analyst opens the dispute view."],
+  ["03 / CURRENT TRUST POLICY", 'eq(project,"aletheia") + eq(type,"trust_policy") + eq(protocolId,P) + eq(assetId,X) + gt(validUntil,now)', "Use the newest active policy for creator and threshold filtering."],
+];
+
+const adoptionFacts = [
+  ["FIRST USER", "A lending-protocol risk analyst reviewing reserve-backed collateral."],
+  ["FIRST 100 RECORDS", "Issuer disclosures ingested by the protocol, plus its analysts’ own signed opinions."],
+  ["ACTIVATION", "Compare one current claim with a trusted opinion before collateral review proceeds."],
+  ["SINGLE-PLAYER MODE", "One protocol gets value immediately; external attestors improve coverage later."],
+];
+
 const loadingSnapshot: AletheiaSnapshot = {
   ...createUnavailableSnapshot("Connecting to the configured Arkiv network."),
   mode: "loading",
@@ -135,7 +148,7 @@ export default function Home() {
             <span><i className={isVerifiedLive ? "online" : ""} /> {snapshot.network}</span><strong>{snapshot.query.resultCount} RESULTS</strong>
             <button onClick={() => setQueryOpen(!queryOpen)}>{queryOpen ? "Close query" : "View query"} ↗</button>
           </div>
-          {queryOpen && <div className="query-inspector" aria-live="polite"><div><small>ACTUAL QUERY PARAMETERS</small><code>{snapshot.query.expression}</code></div><dl><div><dt>Mode</dt><dd>{snapshot.mode.toUpperCase()}</dd></div><div><dt>Network time</dt><dd>{formatTime(queryNow)}</dd></div><div><dt>Validity filter</dt><dd>{snapshot.query.filteredByValidity ? "APPLIED" : "NOT VERIFIED"}</dd></div><div><dt>Result count</dt><dd>{snapshot.query.resultCount}</dd></div></dl><div className="entity-list"><small>ENTITY IDS</small>{snapshot.query.entityIds.length ? snapshot.query.entityIds.map((id) => <code key={id}>{id}</code>) : <code>NO ARKIV ENTITIES RETURNED</code>}</div></div>}
+          {queryOpen && <div className="query-inspector" aria-live="polite"><div><small>ACTUAL QUERY PARAMETERS</small><code>{snapshot.query.expression}</code></div><dl><div><dt>Mode</dt><dd>{snapshot.mode.toUpperCase()}</dd></div><div><dt>Network time</dt><dd>{formatTime(queryNow)}</dd></div><div><dt>Validity filter</dt><dd>{snapshot.query.filteredByValidity ? "APPLIED" : "NOT VERIFIED"}</dd></div><div><dt>Result count</dt><dd>{snapshot.query.resultCount}</dd></div></dl><div className="entity-list"><small>ENTITY IDS</small>{snapshot.query.entityIds.length ? snapshot.query.entityIds.map((id) => <code key={id}>{id}</code>) : <code>NO ARKIV ENTITIES RETURNED</code>}</div><div className="query-contract"><small>COMPLETE PRODUCT QUERY CONTRACT</small>{coreQueries.map((query) => <article key={query[0]}><span>{query[0]}</span><code>{query[1]}</code><p>{query[2]}</p></article>)}</div></div>}
           <div className="evidence-grid" aria-live="polite">
             {visible.length ? visible.map((item) => <article className={`evidence-card ${item.stance}`} key={`${item.proofSource}-${item.entityId}`}>
               <div className="card-index"><span>{short(item.entityId)}</span><i>{item.stance === "corroborate" ? "✓" : item.stance === "qualify" ? "≈" : "!"}</i></div><p className="stance">{item.stance} · {item.type.replaceAll("_", " ")}</p><h4>{item.source}</h4>
@@ -151,7 +164,9 @@ export default function Home() {
       <section className="model-section" id="model">
         <header className="section-head compact"><p><span>02</span> Arkiv data contract</p><h2>BUILT TO<br /><em>DISAGREE.</em></h2></header>
         <div className="model-canvas"><div className="model-lines" aria-hidden="true" />{nodes.map((node, index) => <article className={`model-node n${index + 1}`} key={node[0]}><span>0{index + 1}</span><h3>{node[0]}</h3><p>{node[1]}</p><code>{node[3]}</code><small>{node[2]}</small></article>)}<div className="shared-key"><span>SHARED KEYS</span><strong>assetId / claimId</strong><p>No joins. Append-only voices.</p></div></div>
-        <div className="query-strip"><span>THE QUERY THE PRODUCT RUNS</span><code>eq(project, &quot;aletheia&quot;) + eq(assetId, X) + gt(validUntil, networkNow)</code><button onClick={() => { setQueryOpen(true); document.querySelector("#passport")?.scrollIntoView({ behavior: "smooth" }); }}>INSPECT ↗</button></div>
+        <div className="core-queries"><header><span>THE THREE QUERIES THE PRODUCT RELIES ON</span><button onClick={() => { setQueryOpen(true); document.querySelector("#passport")?.scrollIntoView({ behavior: "smooth" }); }}>INSPECT LIVE PARAMETERS ↗</button></header>{coreQueries.map((query) => <article key={query[0]}><span>{query[0]}</span><code>{query[1]}</code><p>{query[2]}</p></article>)}</div>
+        <div className="renewal-note"><span>FRESHNESS RULE</span><p><strong>ReserveClaim, Attestation, and DisputeNotice are replaced by fresh signed records—never extended to imitate freshness.</strong> TrustPolicy may be extended only after the protocol reapproves its creators and thresholds.</p></div>
+        <div className="adoption-grid" aria-label="Aletheia adoption path">{adoptionFacts.map((fact) => <article key={fact[0]}><span>{fact[0]}</span><p>{fact[1]}</p></article>)}</div>
       </section>
 
       <section className="counterfactual" id="counterfactual">
