@@ -7,7 +7,7 @@
 
   A creator-verifiable, time-bounded disagreement graph for DeFi reserve evidence.
 
-  [Live app](https://aletheia-self.vercel.app) · [Submission answers](SUBMISSION.md) · [Judge it in 60 seconds](#judge-this-in-60-seconds) · [Architecture](#architecture) · [Run locally](#setup)
+  [Live app](https://aletheia-self.vercel.app) · [Judge it in 60 seconds](#judge-this-in-60-seconds) · [Architecture](#architecture) · [Run locally](#setup)
 </div>
 
 ![Aletheia product cover](public/og.png)
@@ -339,6 +339,57 @@ No important behavior silently falls back to hardcoded evidence. Missing or fail
 - add report-hash verification and content-addressed evidence links;
 - create a secured writer service with wallet isolation and audit logging; and
 - evaluate ZK attestations for private reserve components without exposing witnesses.
+
+
+## Ready-to-paste Tally answers
+
+The answers below map directly to the official form and stay within its published limits. Complete the personal/team fields, add your recorded video URL, review the legal confirmations, complete CAPTCHA, and submit before **August 31, 2026 at 23:59 UTC**.
+
+### Idea name
+
+> Aletheia — Reserve-Evidence Disagreement Graph
+
+### One-line pitch
+
+> Aletheia gives DeFi risk teams a creator-verifiable, self-expiring graph of reserve claims, independent attestations, and disagreements before they approve reserve-backed collateral.
+
+### Problem and user
+
+> Risk teams at lending protocols evaluate stablecoins and tokenized RWAs using evidence fragmented across issuer pages, assurance reports, PDFs, and internal reviews. A centralized aggregator can omit adverse opinions, mislabel authors, silently revise normalized records, or keep stale evidence visible. Aletheia serves the analyst deciding whether an asset should enter or remain in a collateral market. The activation event is simple: compare one current issuer claim with a trusted independent opinion and immediately see corroboration, qualification, or dispute before collateral review proceeds. Weekly disclosures and monthly assurance reports make this a recurring workflow; proof-of-reserves snapshot limitations make visible methodology and disagreement essential.
+
+### First slice
+
+> Weekend slice: one USDC passport with one issuer ReserveClaim, two independently authored Attestations, one DisputeNotice, and one protocol TrustPolicy. The analyst inspects creator and transaction proof, filters by trusted creators, counts active disputes, and watches expired evidence leave active results. The first 100 entities come from a protocol ingestion worker publishing issuer disclosures plus its own analysts or risk agents appending opinions, so no external network effect is required. The main unknown is whether teams will publish internal opinions. Excluded: collateral execution, liquidation, universal auditor governance, private reports, ZK generation, and a proprietary safety score.
+
+### Entities and attributes
+
+> Every entity has project="aletheia" and explicit assetId/claimId relationships. ReserveClaim: assetId, claimId, issuerId, methodologyId, evidenceHash, status; observedAt, validUntil, reserveUsdCents, liabilityUsdCents, coverageBps. Attestation: assetId, claimId, methodologyId, stance, status; observedAt, validUntil, confidenceBps, coverageBps. DisputeNotice: assetId, claimId, reasonCode, evidenceHash, status; severityTier, observedAt, validUntil. TrustPolicy: protocolId, assetId, trustedCreator, status; minCoverageBps, maxAgeSec, minCorroborations, validUntil. ParticipantProfile: participantId, role, displayName, credentialHash, status. Money uses integer cents, ratios use basis points, timestamps use integer seconds, and severity is an integer tier. Multi-party contributions are append-only, and creator identity comes from immutable Arkiv $creator metadata—not a payload field.
+
+### Queries
+
+> 1) Active evidence: eq(project,"aletheia") + eq(assetId,X) + gt(validUntil,now). Paginate with cursors; group by type and filter $creator against the protocol policy. 2) Active disputes: eq(project,"aletheia") + eq(type,"dispute_notice") + eq(claimId,C) + gt(validUntil,now). Count for the badge; fetch records on open. 3) Current policy: eq(project,"aletheia") + eq(type,"trust_policy") + eq(protocolId,P) + eq(assetId,X) + gt(validUntil,now). Use the newest active policy for accepted creators and thresholds. Result sets are narrow and namespaced; bounded client-side ordering is used where needed. Nothing depends on joins, server-side custom ordering, push events, triggers, or execution-path latency.
+
+### Expiry, extension, and ownership
+
+> ReserveClaim lifetime follows its evidence: 8 days by default for weekly disclosure or up to 35 days for monthly assurance. Attestation never outlives its parent claim. DisputeNotice lasts 7 days or the claim's remaining life, whichever is shorter. TrustPolicy lasts 90 days; ParticipantProfile lasts one year. ReserveClaim, Attestation, and DisputeNotice are never extended to imitate freshness—a reassessment creates a fresh signed entity. TrustPolicy may be extended only after the protocol reapproves creators and thresholds; profile renewal signals participation, not endorsement. Issuers, attestors, challengers, and protocols write with separate wallets. Arkiv expiry prunes live entity state; Aletheia keeps only the confirmed creation-transaction reference for historical inspection and never presents expired evidence as active.
+
+### Why Arkiv?
+
+> With Postgres and a cron job, Aletheia's operator could hide an adverse opinion, impersonate or relabel an attestor, rewrite normalized evidence without an independently verifiable trace, or keep an expired claim in the active surface. That breaks the product's promise. Arkiv makes immutable $creator provenance, independent multi-writer entities, queryable typed attributes, confirmed transaction references, and protocol-enforced expiry visible to the user. Aletheia exposes competing signed claims and lets each protocol own its TrustPolicy; it never asks users to trust Aletheia's database or one proprietary score.
+
+### What stays off Arkiv?
+
+> Raw reports, bank statements, account details, identity/KYC data, large files, ZK witnesses, secret inputs, proprietary risk calculations, and the final collateral decision. Trading, oracles, liquidation, collateral enforcement, and every latency-sensitive execution step also remain off Arkiv. Arkiv receives only compact public facts, hashes, verifiable pointers, creator-owned opinions, relationships, and freshness metadata.
+
+### Supporting links and remaining personal action
+
+- Track: **DeFi**
+- Product/mockup: https://aletheia-self.vercel.app
+- Repository: https://github.com/0xNexuz/aletheia-arkiv
+- Ideathon MCP used: **Yes**
+- Arkiv SDK/docs used: **Yes**
+- Add: your video URL, optional X post, community/how-heard answers, team size/location, legal names, emails, handles, EVM wallet, required consents, and CAPTCHA.
+
 
 ---
 
